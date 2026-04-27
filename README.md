@@ -1,2 +1,180 @@
-# Brain-Dumps-Puzzled
-Brain Dumps Puzzled, is a digital sanctuary designed to help you "unload" the mental weight of your day by turning heavy thoughts into engaging, therapeutic play. Puzzles effectively help reduce ruminating thoughts and build self trust.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mindful Puzzles | Unload Your Day</title>
+    <!-- Resource: Open source layout generator for crossword logic -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Resource: Client-side PDF generation library -->
+    <script src="https://cloudflare.com"></script>
+    
+    <style>
+        :root {
+            --bg-calm: #F5F5DC; /* Warm Beige: Comfort */
+            --primary-trust: #4A90E2; /* Tranquil Blue: Builds self-trust */
+            --secondary-growth: #8FBC8F; /* Dark Sea Green: Blocks rumination */
+            --text-main: #2F4F4F;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-calm);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container { max-width: 800px; width: 100%; text-align: center; }
+        
+        /* Quote Section */
+        .quote-box {
+            background: white;
+            padding: 20px;
+            border-left: 5px solid var(--primary-trust);
+            margin-bottom: 30px;
+            border-radius: 8px;
+            font-style: italic;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .input-area { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        textarea { width: 90%; height: 100px; padding: 15px; border: 2px solid var(--secondary-growth); border-radius: 8px; margin-bottom: 10px; font-size: 16px; }
+        
+        button { background: var(--primary-trust); color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px; }
+        button.download-btn { background: var(--secondary-growth); margin-top: 15px; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        #puzzle-to-print { padding: 20px; background: white; border-radius: 10px; min-height: 200px; }
+        .grid-cell { width: 35px; height: 35px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; background: white; font-weight: bold; text-transform: uppercase; }
+        
+        .resources { margin-top: 50px; text-align: left; padding: 20px; background: rgba(255,255,255,0.5); border-radius: 10px; }
+        .resources a { color: var(--primary-trust); text-decoration: none; display: block; margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="quote-box">
+        <h3 id="weeklyQuote"></h3>
+        <p>— Weekly Mindful Anchor</p>
+    </div>
+
+    <h1>Breathe. Unload. Play.</h1>
+    <p>Type 15-20 words weighing on you. We'll turn them into a puzzle to help you release.</p>
+    
+    <div class="input-area">
+        <textarea id="wordInput" placeholder="Separated by spaces..."></textarea>
+        <div id="controls">
+            <button onclick="generatePuzzle('crossword')">Make Crossword</button>
+            <button onclick="generatePuzzle('wordsearch')">Make Word Search</button>
+        </div>
+    </div>
+
+    <!-- Wrap the puzzle for PDF export -->
+    <div id="export-area">
+        <div id="puzzle-to-print"></div>
+    </div>
+
+    <button id="downloadBtn" class="download-btn" style="display:none;" onclick="downloadPDF()">Save Puzzle to PDF</button>
+
+    <div class="resources">
+        <h3>🌱 Gentle Resources</h3>
+        <a href="https://988lifeline.org" target="_blank">• 988 Suicide & Crisis Lifeline</a>
+        <a href="https://nami.org" target="_blank">• National Alliance on Mental Illness (NAMI)</a>
+        <a href="https://mhanational.org" target="_blank">• Mental Health America (MHA)</a>
+    </div>
+</div>
+
+<script>
+// UPDATE THIS WEEKLY
+const currentQuote = "The world is yours to NAVIGATE, not SURVIVE.";
+document.getElementById('weeklyQuote').innerText = `"${currentQuote}"`;
+
+function generatePuzzle(type) {
+    const input = document.getElementById('wordInput').value;
+    const words = input.split(/[\s,]+/).filter(w => w.length > 1).map(w => w.toUpperCase());
+    
+    if (words.length < 3) {
+        alert("Please enter a few more words.");
+        return;
+    }
+
+    const container = document.getElementById('puzzle-to-print');
+    container.innerHTML = `<h2>Your Daily Release</h2><p>Focus on finding these words to quiet your mind.</p>`;
+    
+    if (type === 'wordsearch') {
+        renderWordSearch(words);
+    } else {
+        renderCrossword(words);
+    }
+    
+    document.getElementById('downloadBtn').style.display = 'inline-block';
+}
+
+function renderWordSearch(words) {
+    const size = 15;
+    const grid = Array(size).fill().map(() => Array(size).fill(''));
+    
+    words.forEach(word => {
+        let placed = false;
+        let attempts = 0;
+        while (!placed && attempts < 30) {
+            const dir = Math.random() > 0.5 ? 'H' : 'V';
+            const row = Math.floor(Math.random() * (size - (dir === 'V' ? word.length : 0)));
+            const col = Math.floor(Math.random() * (size - (dir === 'H' ? word.length : 0)));
+            let fits = true;
+            for (let i = 0; i < word.length; i++) {
+                const r = row + (dir === 'V' ? i : 0), c = col + (dir === 'H' ? i : 0);
+                if (grid[r][c] !== '' && grid[r][c] !== word[i]) fits = false;
+            }
+            if (fits) {
+                for (let i = 0; i < word.length; i++) {
+                    grid[row + (dir === 'V' ? i : 0)][col + (dir === 'H' ? i : 0)] = word[i];
+                }
+                placed = true;
+            }
+            attempts++;
+        }
+    });
+
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const table = document.createElement('div');
+    table.style.display = 'grid';
+    table.style.gridTemplateColumns = `repeat(${size}, 35px)`;
+    table.style.justifyContent = 'center';
+
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.innerText = grid[r][c] || alphabet[Math.floor(Math.random() * 26)];
+            table.appendChild(cell);
+        }
+    }
+    document.getElementById('puzzle-to-print').appendChild(table);
+}
+
+function renderCrossword(words) {
+    const p = document.createElement('p');
+    p.innerText = "Word List to Process: " + words.join(', ');
+    document.getElementById('puzzle-to-print').appendChild(p);
+}
+
+function downloadPDF() {
+    const element = document.getElementById('export-area');
+    const opt = {
+        margin:       1,
+        filename:     'my-mindful-release.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    // Nutrient: html2pdf().from(element).save() for client-side download
+    html2pdf().set(opt).from(element).save();
+}
+</script>
+</body>
+</html>
+
