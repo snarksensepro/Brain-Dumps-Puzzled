@@ -1,179 +1,476 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mindful Puzzles | Unload Your Day</title>
-    <!-- Resource: Open source layout generator for crossword logic -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- Resource: Client-side PDF generation library -->
-    <script src="https://cloudflare.com"></script>
-    
     <style>
-        :root {
-            --bg-calm: #F5F5DC; /* Warm Beige: Comfort */
-            --primary-trust: #4A90E2; /* Tranquil Blue: Builds self-trust */
-            --secondary-growth: #8FBC8F; /* Dark Sea Green: Blocks rumination */
-            --text-main: #2F4F4F;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-calm);
-            color: var(--text-main);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
+        :root { --bg: #F5F5DC; --sage: #8FBC8F; --text: #2F4F4F; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 800px; width: 100%; text-align: center; }
-        
-        /* Quote Section */
-        .quote-box {
-            background: white;
-            padding: 20px;
-            border-left: 5px solid var(--primary-trust);
-            margin-bottom: 30px;
-            border-radius: 8px;
-            font-style: italic;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
+        .quote-box { background: white; padding: 20px; border-left: 8px solid var(--sage); margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .info-tab { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left; border: 1px solid #ddd; cursor: pointer; }
+        .info-content { display: none; font-size: 0.9rem; line-height: 1.5; color: #555; margin-top: 10px; }
+        .info-header { display: flex; justify-content: space-between; align-items: center; color: var(--sage); font-weight: bold; }
+        #puzzle-area { background: white; padding: 15px; border-radius: 15px; display: none; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box; }
+        #grid { display: grid; justify-content: center; gap: 2px; margin: 15px 0; }
+        #scramble-container { display: none; width: 100%; text-align: left; margin-top: 15px; }
+        .clue-box { font-family: monospace; letter-spacing: 2px; font-weight: bold; background: #eee; padding: 5px; border-radius: 4px; text-align: center; margin-bottom: 5px; }
+        .puz-input { border: 1px solid #ddd; border-bottom: 2px solid var(--sage); padding: 5px; outline: none; text-transform: uppercase; font-weight: bold; width: 100%; box-sizing: border-box; }
+        .correct { background: #556B2F !important; color: white !important; border-color: #556B2F !important; }
+        .cell { width: 32px; height: 32px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; user-select: none; font-size: 14px; }
+        .cell.selected { background: var(--sage); color: white; }
+        .cell.correct { background: #556B2F; color: white; cursor: default; }
+        .shake { animation: shake 0.3s; }
+        @keyframes shake { 0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)} }
+        #list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 400px; margin-top: 20px; font-weight: bold; font-size: 0.9rem; text-align: left; }
+        .struck { text-decoration: line-through; color: #aaa; opacity: 0.5; }
 
-        .input-area { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        textarea { width: 90%; height: 100px; padding: 15px; border: 2px solid var(--secondary-growth); border-radius: 8px; margin-bottom: 10px; font-size: 16px; }
-        
-        button { background: var(--primary-trust); color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px; }
-        button.download-btn { background: var(--secondary-growth); margin-top: 15px; }
-        button:hover { opacity: 0.9; transform: translateY(-2px); }
+```
+    /* ── MAIN MODAL ── */
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+    #release-modal { background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 500px; width: 100%; }
+    #journal-prompt-box { background: #f9f9f9; border: 1px dashed var(--sage); padding: 15px; margin-top: 20px; border-radius: 10px; font-style: italic; color: #444; }
+    .modal-btn-row { display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .btn-now { background: #0d0d0d; color: #00ff41; border: 1px solid #00ff41; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.15s; }
+    .btn-now:hover { background: #00ff41; color: #000; }
+    .btn-later { background: white; color: #8FBC8F; border: 2px solid #8FBC8F; padding: 12px 22px; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: all 0.2s; }
+    .btn-later:hover { background: #8FBC8F; color: white; }
 
-        #puzzle-to-print { padding: 20px; background: white; border-radius: 10px; min-height: 200px; }
-        .grid-cell { width: 35px; height: 35px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; background: white; font-weight: bold; text-transform: uppercase; }
-        
-        .resources { margin-top: 50px; text-align: left; padding: 20px; background: rgba(255,255,255,0.5); border-radius: 10px; }
-        .resources a { color: var(--primary-trust); text-decoration: none; display: block; margin: 5px 0; }
-    </style>
+    /* ── TERMINAL ── */
+    #terminal-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 200; flex-direction: column; justify-content: center; align-items: center; padding: 28px; box-sizing: border-box; }
+    #terminal-box { width: 100%; max-width: 660px; font-family: 'Courier New', monospace; color: #00ff41; }
+    #terminal-header { font-size: 0.72rem; color: #009922; margin-bottom: 18px; text-align: left; line-height: 1.7; white-space: pre; }
+    #terminal-q { font-size: 0.95rem; color: #00ff41; margin-bottom: 20px; line-height: 1.6; text-align: left; border-left: 2px solid #00ff41; padding-left: 12px; }
+    #terminal-input-wrap { display: flex; align-items: flex-start; gap: 8px; }
+    #terminal-prompt-sym { color: #00ff41; font-size: 1rem; padding-top: 9px; flex-shrink: 0; }
+    #terminal-ans { background: transparent; border: none; border-bottom: 1px solid #00aa28; color: #00ff41; font-family: 'Courier New', monospace; font-size: 0.95rem; outline: none; width: 100%; resize: none; line-height: 1.6; min-height: 72px; caret-color: #00ff41; }
+    #terminal-ans::placeholder { color: #006614; }
+    #terminal-enter { margin-top: 18px; background: transparent; border: 1px solid #00ff41; color: #00ff41; font-family: 'Courier New', monospace; padding: 9px 26px; cursor: pointer; letter-spacing: 2px; font-size: 0.8rem; transition: all 0.15s; }
+    #terminal-enter:hover { background: #00ff41; color: #000; }
+    @keyframes tblink { 50%{opacity:0} }
+
+    /* ── BURN SCENE ── */
+    #burn-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: #110800; align-items: center; justify-content: center; flex-direction: column; overflow: hidden; cursor: pointer; }
+    #burn-scene { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px; padding: 20px; box-sizing: border-box; }
+    #warm-light { position: absolute; inset: 0; background: radial-gradient(ellipse 65% 55% at 50% 28%, rgba(255,170,50,0.15) 0%, transparent 68%); pointer-events: none; }
+    #paper { position: relative; width: 88%; max-width: 360px; min-height: 180px; background: #fdf6e3; border-radius: 3px; padding: 26px 22px 30px; box-shadow: 0 10px 50px rgba(0,0,0,0.7), inset 0 0 30px rgba(180,140,60,0.06); font-family: Georgia, serif; font-size: 0.95rem; color: #2a1800; line-height: 1.75; text-align: left; transition: opacity 0.8s, transform 0.8s; overflow: hidden; }
+    #paper-lines-bg { position: absolute; inset: 0; pointer-events: none; }
+    #paper-prompt-label { font-size: 0.75rem; color: #9a7040; margin-bottom: 8px; font-style: italic; }
+    #paper-text-content { position: relative; z-index: 2; white-space: pre-wrap; word-break: break-word; }
+    #paper-cursor { display: inline-block; width: 2px; height: 0.95em; background: #3a1800; vertical-align: middle; margin-left: 1px; animation: tblink 0.65s step-end infinite; }
+    #flame-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #burn-hint { color: rgba(255,190,80,0.6); font-family: 'Courier New', monospace; font-size: 0.75rem; margin-top: 22px; letter-spacing: 1px; pointer-events: none; }
+    #burn-done { display: none; margin-top: 16px; background: transparent; border: 1px solid rgba(255,170,50,0.55); color: rgba(255,200,100,0.9); font-family: 'Courier New', monospace; padding: 10px 26px; cursor: pointer; letter-spacing: 2px; font-size: 0.8rem; border-radius: 3px; }
+
+    /* ── ANSWER LATER ── */
+    #later-overlay { display: none; position: fixed; inset: 0; background: #fff8f0; z-index: 200; align-items: center; justify-content: center; flex-direction: column; padding: 36px; box-sizing: border-box; text-align: center; }
+    #later-headline { font-family: Georgia, serif; font-size: 1.5rem; color: #7a3a0a; font-weight: bold; margin-bottom: 18px; line-height: 1.4; }
+    #later-body { background: #fdf6e3; border: 1px dashed #c8a060; border-radius: 10px; padding: 20px 24px; font-style: italic; color: #4a3010; font-size: 1rem; line-height: 1.65; max-width: 460px; margin-bottom: 28px; }
+    #later-ok { background: var(--sage); color: white; border: none; padding: 12px 28px; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 0.95rem; }
+
+    /* ── SHARED ── */
+    .resources { margin-top: 30px; padding: 20px; background: white; border-radius: 15px; text-align: left; width: 100%; }
+    .resources a { color: var(--sage); font-weight: bold; text-decoration: none; display: block; margin: 8px 0; }
+    button { background: var(--sage); color: white; border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; margin: 5px; }
+    textarea { width: 90%; height: 60px; border: 2px solid var(--sage); border-radius: 8px; font-size: 16px; padding: 10px; margin-bottom: 10px; }
+    @media print { .no-print { display: none; } }
+</style>
+```
+
 </head>
 <body>
 
-<div class="container">
-    <div class="quote-box">
-        <h3 id="weeklyQuote"></h3>
-        <p>— Weekly Mindful Anchor</p>
-    </div>
+<!-- ══ MAIN COMPLETION MODAL ══ -->
 
-    <h1>Breathe. Unload. Play.</h1>
-    <p>Type 15-20 words weighing on you. We'll turn them into a puzzle to help you release.</p>
-    
-    <div class="input-area">
-        <textarea id="wordInput" placeholder="Separated by spaces..."></textarea>
-        <div id="controls">
-            <button onclick="generatePuzzle('crossword')">Make Crossword</button>
-            <button onclick="generatePuzzle('wordsearch')">Make Word Search</button>
+<div id="modal-overlay">
+    <div id="release-modal">
+        <h2 style="color:var(--sage);margin-top:0;">Release Accomplished.</h2>
+        <p>You identified, wrote, and sat with these words. Now release their weight, let go of predetermined outcomes, and create the reality you deserve.</p>
+        <div id="journal-prompt-box">
+            <strong>Shadow Work Reflection:</strong><br>
+            <span id="prompt-text"></span>
+        </div>
+        <div class="modal-btn-row">
+            <button class="btn-now" onclick="openTerminal()">[ ANSWER NOW ]</button>
+            <button class="btn-later" onclick="openLater()">Answer Later</button>
         </div>
     </div>
+</div>
 
-    <!-- Wrap the puzzle for PDF export -->
-    <div id="export-area">
-        <div id="puzzle-to-print"></div>
+<!-- ══ TERMINAL ══ -->
+
+<div id="terminal-overlay">
+    <div id="terminal-box">
+        <div id="terminal-header">SHADOW_WORK_TERMINAL v1.0
+────────────────────────────────────────
+SESSION: ANONYMOUS  |  ENCRYPTION: ON
+────────────────────────────────────────</div>
+        <div id="terminal-q"></div>
+        <div id="terminal-input-wrap">
+            <span id="terminal-prompt-sym">&gt;&nbsp;</span>
+            <textarea id="terminal-ans" rows="3" placeholder="type your truth... press ENTER to release" spellcheck="false"></textarea>
+        </div>
+        <div style="text-align:right;">
+            <button id="terminal-enter" onclick="submitTerminal()">[ ENTER ]</button>
+        </div>
     </div>
+</div>
 
-    <button id="downloadBtn" class="download-btn" style="display:none;" onclick="downloadPDF()">Save Puzzle to PDF</button>
+<!-- ══ BURN SCENE ══ -->
 
-    <div class="resources">
-        <h3>🌱 Gentle Resources</h3>
+<div id="burn-overlay">
+    <div id="warm-light"></div>
+    <div id="burn-scene">
+        <div id="paper">
+            <canvas id="flame-canvas"></canvas>
+            <div id="paper-lines-bg"></div>
+            <div id="paper-prompt-label"></div>
+            <div id="paper-text-content"><span id="paper-written"></span><span id="paper-cursor"></span></div>
+        </div>
+    </div>
+    <div id="burn-hint">tap anywhere to ignite</div>
+    <button id="burn-done" onclick="finishBurn()">Keep Navigating →</button>
+</div>
+
+<!-- ══ ANSWER LATER ══ -->
+
+<div id="later-overlay">
+    <div id="later-headline">✍️ Write this down somewhere — NOW.</div>
+    <div id="later-body"></div>
+    <button id="later-ok" onclick="closeLater()">Got it — I'll write it down</button>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+
+<div class="container">
+    <div class="quote-box"><h2>"The world is yours to NAVIGATE, not SURVIVE."</h2></div>
+    <div class="info-tab no-print" onclick="toggleInfo()">
+        <div class="info-header"><span>🧠 How this works to stop overthinking</span><span id="info-toggle-icon">+</span></div>
+        <div id="info-content" class="info-content">Pattern-recognition shifts your brain from emotional overdrive to problem-solving mode. For Word Search, the list stays visible to aid focus. For Scramble, the list is hidden to push your visualization.</div>
+    </div>
+    <div id="input-section" class="input-area no-print">
+        <textarea id="words" placeholder="Enter ten words that have been weighing on you today"></textarea><br>
+        <button onclick="makeGrid('wordsearch')">Word Search</button>
+        <button onclick="makeGrid('scramble')">Word Scramble</button>
+    </div>
+    <div id="puzzle-area">
+        <h3 id="puzzle-title" style="margin-top:0;">Your Daily Release</h3>
+        <div id="grid"></div>
+        <div id="scramble-container"></div>
+        <div id="list"></div>
+        <button class="no-print" onclick="resetApp()" style="background:#888;margin-top:20px;">Start New Session</button>
+    </div>
+    <div class="resources no-print">
+        <h3>🌱 Gentle Support Resources</h3>
+        <a href="https://badbitcheshavebaddaystoo.com" target="_blank">• Bad Bitches Have Bad Days Too (Megan Thee Stallion Hub)</a>
         <a href="https://988lifeline.org" target="_blank">• 988 Suicide & Crisis Lifeline</a>
-        <a href="https://nami.org" target="_blank">• National Alliance on Mental Illness (NAMI)</a>
+        <a href="https://nami.org" target="_blank">• NAMI HelpLine</a>
         <a href="https://mhanational.org" target="_blank">• Mental Health America (MHA)</a>
     </div>
 </div>
 
 <script>
-// UPDATE THIS WEEKLY
-const currentQuote = "The world is yours to NAVIGATE, not SURVIVE.";
-document.getElementById('weeklyQuote').innerText = `"${currentQuote}"`;
+let wordsArr = [], sequence = [], completedCount = 0, currentPrompt = '';
+const shadowPrompts = [
+    "What recurring negative thought has the most power over you?",
+    "When you feel out of control, what do you grip tighter?",
+    "What part of yourself do you hide from others to feel safe?",
+    "How does your inner critic sound?",
+    "What would life look like if you stopped people-pleasing?",
+    "What lie do you tell yourself to stay comfortable?",
+    "What are you currently avoiding that needs attention?",
+    "How do you punish yourself for mistakes?",
+    "What traits in others trigger you most?",
+    "What do you need to forgive yourself for?"
+];
 
-function generatePuzzle(type) {
-    const input = document.getElementById('wordInput').value;
-    const words = input.split(/[\s,]+/).filter(w => w.length > 1).map(w => w.toUpperCase());
-    
-    if (words.length < 3) {
-        alert("Please enter a few more words.");
-        return;
-    }
+/* ─── helpers ─── */
+function toggleInfo() {
+    const c = document.getElementById('info-content'), i = document.getElementById('info-toggle-icon');
+    c.style.display = c.style.display === 'block' ? 'none' : 'block';
+    i.innerText = c.style.display === 'block' ? '-' : '+';
+}
+function resetApp() { location.reload(); }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function flex(id) { document.getElementById(id).style.display = 'flex'; }
 
-    const container = document.getElementById('puzzle-to-print');
-    container.innerHTML = `<h2>Your Daily Release</h2><p>Focus on finding these words to quiet your mind.</p>`;
-    
-    if (type === 'wordsearch') {
-        renderWordSearch(words);
-    } else {
-        renderCrossword(words);
-    }
-    
-    document.getElementById('downloadBtn').style.display = 'inline-block';
+/* ─── puzzle finish ─── */
+function finish() {
+    currentPrompt = shadowPrompts[Math.floor(Math.random() * shadowPrompts.length)];
+    document.getElementById('prompt-text').innerText = currentPrompt;
+    flex('modal-overlay');
 }
 
-function renderWordSearch(words) {
-    const size = 15;
-    const grid = Array(size).fill().map(() => Array(size).fill(''));
-    
-    words.forEach(word => {
-        let placed = false;
-        let attempts = 0;
-        while (!placed && attempts < 30) {
-            const dir = Math.random() > 0.5 ? 'H' : 'V';
-            const row = Math.floor(Math.random() * (size - (dir === 'V' ? word.length : 0)));
-            const col = Math.floor(Math.random() * (size - (dir === 'H' ? word.length : 0)));
+/* ─── TERMINAL ─── */
+function openTerminal() {
+    hide('modal-overlay');
+    flex('terminal-overlay');
+    document.getElementById('terminal-q').innerText = '> ' + currentPrompt;
+    const ta = document.getElementById('terminal-ans');
+    ta.value = '';
+    ta.focus();
+    ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTerminal(); } };
+}
+
+function submitTerminal() {
+    const ans = document.getElementById('terminal-ans').value.trim();
+    if (!ans) return;
+    hide('terminal-overlay');
+    openBurnScene(ans);
+}
+
+/* ─── BURN SCENE ─── */
+let burnIgnited = false;
+
+function openBurnScene(answer) {
+    burnIgnited = false;
+    const overlay = document.getElementById('burn-overlay');
+    flex('burn-overlay');
+
+    // reset visuals
+    const paper = document.getElementById('paper');
+    paper.style.opacity = '1';
+    paper.style.filter = 'none';
+    paper.style.transform = 'none';
+    hide('burn-done');
+    document.getElementById('burn-hint').style.display = 'block';
+
+    // draw ruled lines on paper background
+    const linesEl = document.getElementById('paper-lines-bg');
+    linesEl.innerHTML = '';
+    for (let i = 0; i < 18; i++) {
+        const l = document.createElement('div');
+        Object.assign(l.style, { position:'absolute', left:'0', right:'0', top:(34 + i*26)+'px', height:'1px', background:'rgba(80,120,200,0.12)' });
+        linesEl.appendChild(l);
+    }
+
+    // set prompt label
+    document.getElementById('paper-prompt-label').innerText = currentPrompt;
+
+    // animate handwriting
+    const written = document.getElementById('paper-written');
+    const cursor = document.getElementById('paper-cursor');
+    written.innerText = '';
+    cursor.style.display = 'inline-block';
+
+    let idx = 0;
+    function typeChar() {
+        if (idx < answer.length) {
+            written.innerText += answer[idx++];
+            setTimeout(typeChar, 32 + Math.random() * 28);
+        } else {
+            cursor.style.display = 'none';
+        }
+    }
+    typeChar();
+
+    // tap-to-ignite
+    overlay.onclick = function(e) {
+        if (e.target === document.getElementById('burn-done')) return;
+        if (burnIgnited) return;
+        burnIgnited = true;
+        document.getElementById('burn-hint').style.display = 'none';
+        overlay.style.cursor = 'default';
+        startFire();
+    };
+}
+
+function startFire() {
+    const paper = document.getElementById('paper');
+    const canvas = document.getElementById('flame-canvas');
+    canvas.width = paper.offsetWidth;
+    canvas.height = paper.offsetHeight;
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('burn-overlay');
+
+    let progress = 0;
+    const particles = [];
+    let frame = 0;
+
+    function spawn() {
+        const n = 2 + Math.floor(progress * 9);
+        for (let i = 0; i < n; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: canvas.height * (1 - progress) + (Math.random() * 24 - 12),
+                vx: (Math.random() - 0.5) * 1.4,
+                vy: -(1.4 + Math.random() * 2.8),
+                life: 1,
+                decay: 0.013 + Math.random() * 0.018,
+                r: 5 + Math.random() * 11,
+                hue: 18 + Math.random() * 28
+            });
+        }
+    }
+
+    function drawFrame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const burnY = canvas.height * (1 - progress);
+
+        // char shadow
+        const cg = ctx.createLinearGradient(0, burnY - 28, 0, burnY + 18);
+        cg.addColorStop(0, 'rgba(0,0,0,0)');
+        cg.addColorStop(0.45, 'rgba(15,8,0,0.72)');
+        cg.addColorStop(1, 'rgba(4,2,0,0.96)');
+        ctx.fillStyle = cg;
+        ctx.fillRect(0, burnY - 28, canvas.width, canvas.height - burnY + 28);
+
+        // glow edge
+        const gg = ctx.createLinearGradient(0, burnY - 14, 0, burnY + 6);
+        gg.addColorStop(0, 'rgba(255,155,15,0)');
+        gg.addColorStop(0.5, 'rgba(255,110,8,0.65)');
+        gg.addColorStop(1, 'rgba(255,50,0,0)');
+        ctx.fillStyle = gg;
+        ctx.fillRect(0, burnY - 14, canvas.width, 20);
+
+        // embers
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+            if (p.life <= 0) { particles.splice(i, 1); continue; }
+            ctx.save();
+            ctx.globalAlpha = p.life * 0.82;
+            const r = p.r * p.life;
+            const pg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+            pg.addColorStop(0,   `hsla(${p.hue+22},100%,92%,1)`);
+            pg.addColorStop(0.35,`hsla(${p.hue},100%,62%,0.8)`);
+            pg.addColorStop(1,   `hsla(${p.hue-12},80%,28%,0)`);
+            ctx.fillStyle = pg;
+            ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function tick() {
+        progress += 0.0025 + progress * 0.002;
+        frame++;
+        spawn();
+        drawFrame();
+
+        // paper chars
+        if (progress > 0.25) {
+            const f = Math.min(1, (progress - 0.25) * 2.8);
+            document.getElementById('paper').style.filter = `sepia(${f}) brightness(${Math.max(0.15, 1 - f * 0.85)})`;
+        }
+
+        // warm flicker on bg
+        const glow = 0.1 + Math.sin(frame * 0.28) * 0.04 + progress * 0.12;
+        const g2 = Math.floor(130 + Math.random() * 25);
+        overlay.style.background = `radial-gradient(ellipse 75% 60% at 50% 38%, rgba(255,${g2},35,${glow.toFixed(3)}) 0%, #110800 68%)`;
+
+        if (progress < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            // fully burned
+            setTimeout(() => {
+                document.getElementById('paper').style.opacity = '0';
+                document.getElementById('burn-done').style.display = 'inline-block';
+            }, 350);
+        }
+    }
+    tick();
+}
+
+function finishBurn() {
+    hide('burn-overlay');
+    resetApp();
+}
+
+/* ─── ANSWER LATER ─── */
+function openLater() {
+    hide('modal-overlay');
+    document.getElementById('later-body').innerText = currentPrompt;
+    flex('later-overlay');
+}
+function closeLater() {
+    hide('later-overlay');
+    resetApp();
+}
+
+/* ─── PUZZLE LOGIC ─── */
+function makeGrid(type) {
+    const input = document.getElementById('words');
+    wordsArr = input.value.split(/[\s,]+/).filter(w => w.length > 1).map(w => w.toUpperCase()).slice(0, 10);
+    if (!wordsArr.length) return;
+    hide('input-section');
+    flex('puzzle-area');
+    sequence = []; completedCount = 0;
+    const gridEl = document.getElementById('grid'), scrambleEl = document.getElementById('scramble-container'), listEl = document.getElementById('list');
+    gridEl.innerHTML = ''; scrambleEl.innerHTML = ''; listEl.innerHTML = '';
+    if (type === 'wordsearch') {
+        gridEl.style.display = 'grid'; scrambleEl.style.display = 'none'; listEl.style.display = 'grid';
+        generateWordSearch();
+        wordsArr.forEach(w => listEl.innerHTML += `<div id="w-${w}">• ${w}</div>`);
+    } else {
+        gridEl.style.display = 'none'; scrambleEl.style.display = 'grid'; listEl.style.display = 'none';
+        generateScramble();
+    }
+}
+
+function generateScramble() {
+    wordsArr.forEach(word => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:10px;margin-bottom:5px;';
+        const clue = document.createElement('div');
+        clue.className = 'clue-box'; clue.style.flex = '1';
+        clue.innerText = word.split('').sort(() => Math.random()-0.5).join('');
+        const inp = document.createElement('input');
+        inp.className = 'puz-input'; inp.style.flex = '1.5';
+        inp.oninput = () => { if (inp.value.toUpperCase() === word) { inp.classList.add('correct'); inp.disabled = true; completedCount++; if (completedCount === wordsArr.length) finish(); } };
+        row.append(clue, inp);
+        document.getElementById('scramble-container').append(row);
+    });
+}
+
+function generateWordSearch() {
+    const size = 12, grid = Array(size).fill().map(() => Array(size).fill(''));
+    const dirs = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]];
+    wordsArr.forEach(word => {
+        let placed = false, tries = 0;
+        while (!placed && tries < 200) {
+            const d = dirs[Math.floor(Math.random()*dirs.length)], r = Math.floor(Math.random()*size), c = Math.floor(Math.random()*size);
             let fits = true;
             for (let i = 0; i < word.length; i++) {
-                const r = row + (dir === 'V' ? i : 0), c = col + (dir === 'H' ? i : 0);
-                if (grid[r][c] !== '' && grid[r][c] !== word[i]) fits = false;
+                const rr = r+d[0]*i, cc = c+d[1]*i;
+                if (rr<0||rr>=size||cc<0||cc>=size||(grid[rr][cc]!==''&&grid[rr][cc]!==word[i])) { fits=false; break; }
             }
-            if (fits) {
-                for (let i = 0; i < word.length; i++) {
-                    grid[row + (dir === 'V' ? i : 0)][col + (dir === 'H' ? i : 0)] = word[i];
-                }
-                placed = true;
-            }
-            attempts++;
+            if (fits) { for (let i=0;i<word.length;i++) grid[r+d[0]*i][c+d[1]*i]=word[i]; placed=true; }
+            tries++;
         }
     });
-
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const table = document.createElement('div');
-    table.style.display = 'grid';
-    table.style.gridTemplateColumns = `repeat(${size}, 35px)`;
-    table.style.justifyContent = 'center';
-
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-            const cell = document.createElement('div');
-            cell.className = 'grid-cell';
-            cell.innerText = grid[r][c] || alphabet[Math.floor(Math.random() * 26)];
-            table.appendChild(cell);
-        }
+    const gridEl = document.getElementById('grid');
+    gridEl.style.gridTemplateColumns = `repeat(${size}, 32px)`;
+    for (let r=0;r<size;r++) for (let c=0;c<size;c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerText = grid[r][c] || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random()*26)];
+        cell.onclick = () => {
+            if (cell.classList.contains('correct')) return;
+            cell.classList.toggle('selected');
+            sequence = Array.from(document.querySelectorAll('.cell.selected'));
+            checkWS();
+        };
+        gridEl.append(cell);
     }
-    document.getElementById('puzzle-to-print').appendChild(table);
 }
 
-function renderCrossword(words) {
-    const p = document.createElement('p');
-    p.innerText = "Word List to Process: " + words.join(', ');
-    document.getElementById('puzzle-to-print').appendChild(p);
-}
-
-function downloadPDF() {
-    const element = document.getElementById('export-area');
-    const opt = {
-        margin:       1,
-        filename:     'my-mindful-release.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    // Nutrient: html2pdf().from(element).save() for client-side download
-    html2pdf().set(opt).from(element).save();
+function checkWS() {
+    const cur = sequence.map(c=>c.innerText).join(''), rev = cur.split('').reverse().join('');
+    const match = wordsArr.find(w => cur===w||rev===w);
+    if (match) {
+        sequence.forEach(c => { c.classList.remove('selected'); c.classList.add('correct'); });
+        const lm = document.getElementById('w-'+match);
+        if (lm) lm.classList.add('struck');
+        sequence = []; completedCount++;
+        if (completedCount === wordsArr.length) finish();
+    } else if (sequence.length >= 3 && !wordsArr.some(w => w.includes(cur)||w.includes(rev))) {
+        sequence.forEach(c => c.classList.add('shake'));
+        setTimeout(() => { sequence.forEach(c => c.classList.remove('selected','shake')); sequence = []; }, 300);
+    }
 }
 </script>
+
 </body>
 </html>
